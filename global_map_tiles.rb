@@ -193,13 +193,16 @@ class GlobalMercator
   def quad_tree (tx, ty, zoom)
     quad_key = ''
     ty = (2**zoom - 1) - ty
-    something.each do |i|
+    i = zoom
+    while i > 0 do
       digit = 0
       mask = 1 << (i-1)
       digit += 1 if (tx & mask) != 0
       digit += 2 if (ty & mask) != 0
-      quadKey += digit.to_s
+      quad_key += digit.to_s
+      i -= 1
     end
+    quad_key
   end
 end
 
@@ -264,3 +267,206 @@ class GlobalGeodetic
     ]
   end
 end
+
+# if __name__ == "__main__":
+#   import sys, os
+
+if $PROGRAM_NAME == __FILE__
+
+#     
+#   def Usage(s = ""):
+#     print "Usage: globalmaptiles.py [-profile 'mercator'|'geodetic'] zoomlevel lat lon [latmax lonmax]"
+#     print
+#     if s:
+#       print s
+#       print
+#     print "This utility prints for given WGS84 lat/lon coordinates (or bounding box) the list of tiles"
+#     print "covering specified area. Tiles are in the given 'profile' (default is Google Maps 'mercator')"
+#     print "and in the given pyramid 'zoomlevel'."
+#     print "For each tile several information is printed including bonding box in EPSG:900913 and WGS84."
+#     sys.exit(1)
+# 
+  def usage (s=nil)
+    puts "Usage: global_map_tiles.rb [-profile 'mercator'|'geodetic'] zoomlevel lat lon [latmax lonmax]"
+    puts
+    if s
+      puts s
+      puts ''
+    end
+    puts "This utility prints for given WGS84 lat/lon coordinates (or bounding box) the list of tiles"
+    puts "covering specified area. Tiles are in the given 'profile' (default is Google Maps 'mercator')"
+    puts "and in the given pyramid 'zoomlevel'."
+    puts "For each tile several information is printed including bonding box in EPSG:900913 and WGS84."
+    exit 1
+  end
+
+#   profile = 'mercator'
+#   zoomlevel = None
+#   lat, lon, latmax, lonmax = None, None, None, None
+#   boundingbox = False
+
+  profile = 'mercator'
+  zoomlevel = nil
+  lat, lon, latmax, lonmax = nil, nil, nil, nil
+  boundingbox = false
+
+  #   argv = sys.argv
+  #   i = 1
+  #   while i < len(argv):
+  #     arg = argv[i]
+  # 
+  #     if arg == '-profile':
+  #       i = i + 1
+  #       profile = argv[i]
+  #     
+  #     if zoomlevel is None:
+  #       zoomlevel = int(argv[i])
+  #     elif lat is None:
+  #       lat = float(argv[i])
+  #     elif lon is None:
+  #       lon = float(argv[i])
+  #     elif latmax is None:
+  #       latmax = float(argv[i])
+  #     elif lonmax is None:
+  #       lonmax = float(argv[i])
+  #     else:
+  #       Usage("ERROR: Too many parameters")
+  # 
+  #     i = i + 1
+  #   
+
+  argv = ARGV
+  i = 0
+  while i < argv.length
+    arg = argv[i]
+
+    if arg == '-profile'
+      i = i + 1
+      profile = argv[i]
+    end
+    
+    if zoomlevel.nil?
+      zoomlevel = argv[i].to_i
+    elsif lat.nil?
+      lat = argv[i].to_f
+    elsif lon.nil?
+      lon = argv[i].to_f
+    elsif latmax.nil?
+      latmax = argv[i].to_f
+    elsif lonmax.nil?
+      lonmax = argv[i].to_f
+    else
+      usage("ERROR: Too many parameters")
+    end
+
+    i += 1
+  end
+
+#   if profile != 'mercator':
+#     Usage("ERROR: Sorry, given profile is not implemented yet.")
+#   
+  if profile != 'mercator'
+    usage("ERROR: Sorry, given profile is not implemented yet.")
+  end
+  
+#   if zoomlevel == None or lat == None or lon == None:
+#     Usage("ERROR: Specify at least 'zoomlevel', 'lat' and 'lon'.")
+#   if latmax is not None and lonmax is None:
+#     Usage("ERROR: Both 'latmax' and 'lonmax' must be given.")
+#   
+  if zoomlevel == nil or lat == nil or lon == nil
+    usage("ERROR: Specify at least 'zoomlevel', 'lat' and 'lon'.")
+  end
+  if latmax != nil and lonmax == nil
+    usage("ERROR: Both 'latmax' and 'lonmax' must be given.")
+  end
+  
+#   if latmax != None and lonmax != None:
+#     if latmax < lat:
+#       Usage("ERROR: 'latmax' must be bigger then 'lat'")
+#     if lonmax < lon:
+#       Usage("ERROR: 'lonmax' must be bigger then 'lon'")
+#     boundingbox = (lon, lat, lonmax, latmax)
+#   
+  if latmax != nil and lonmax != nil
+    if latmax < lat
+      usage("ERROR: 'latmax' must be bigger then 'lat'")
+    end
+    if lonmax < lon
+      usage("ERROR: 'lonmax' must be bigger then 'lon'")
+    end
+    boundingbox = [lon, lat, lonmax, latmax]
+  end
+  
+#   tz = zoomlevel
+#   mercator = GlobalMercator()
+# 
+  tz = zoomlevel
+  mercator = GlobalMercator.new
+
+#   mx, my = mercator.LatLonToMeters( lat, lon )
+#   print "Spherical Mercator (ESPG:900913) coordinates for lat/lon: "
+#   print (mx, my)
+#   tminx, tminy = mercator.MetersToTile( mx, my, tz )
+#   
+  mx, my = mercator.lat_long_to_meters( lat, lon )
+  puts "Spherical Mercator (ESPG:900913) coordinates for lat/lon: "
+  puts "(#{mx}, #{my})"
+  tminx, tminy = mercator.meters_to_tile( mx, my, tz )
+
+#   if boundingbox:
+#     mx, my = mercator.LatLonToMeters( latmax, lonmax )
+#     print "Spherical Mercator (ESPG:900913) cooridnate for maxlat/maxlon: "
+#     print (mx, my)
+#     tmaxx, tmaxy = mercator.MetersToTile( mx, my, tz )
+#   else:
+#     tmaxx, tmaxy = tminx, tminy
+#     
+  if boundingbox
+    mx, my = mercator.lat_long_to_meters( latmax, lonmax )
+    puts "Spherical Mercator (ESPG:900913) cooridnate for maxlat/maxlon: "
+    puts "(#{mx}, #{my})"
+    tmaxx, tmaxy = mercator.meters_to_tile( mx, my, tz )
+  else
+    tmaxx, tmaxy = tminx, tminy
+  end
+    
+#   for ty in range(tminy, tmaxy+1):
+#     for tx in range(tminx, tmaxx+1):
+#       tilefilename = "%s/%s/%s" % (tz, tx, ty)
+#       print tilefilename, "( TileMapService: z / x / y )"
+#     
+#       gx, gy = mercator.GoogleTile(tx, ty, tz)
+#       print "\tGoogle:", gx, gy
+#       quadkey = mercator.QuadTree(tx, ty, tz)
+#       print "\tQuadkey:", quadkey, '(',int(quadkey, 4),')'
+#       bounds = mercator.TileBounds( tx, ty, tz)
+#       print
+#       print "\tEPSG:900913 Extent: ", bounds
+#       wgsbounds = mercator.TileLatLonBounds( tx, ty, tz)
+#       print "\tWGS84 Extent:", wgsbounds
+#       print "\tgdalwarp -ts 256 256 -te %s %s %s %s %s %s_%s_%s.tif" % (
+#         bounds[0], bounds[1], bounds[2], bounds[3], "<your-raster-file-in-epsg900913.ext>", tz, tx, ty)
+#       print
+  (tminy..tmaxy).each do |ty|
+    (tminx..tmaxx).each do |tx|
+      tilefilename = "%s/%s/%s" % [tz, tx, ty]
+      puts "#{tilefilename} ( TileMapService: z / x / y )"
+    
+      gx, gy = mercator.google_tile(tx, ty, tz)
+      puts "\tGoogle: #{gx} #{gy}"
+      quadkey = mercator.quad_tree(tx, ty, tz)
+      puts "\tQuadkey: #{quadkey} ( #{quadkey.to_i(4)} )"
+      bounds = mercator.tile_bounds( tx, ty, tz)
+      puts ''
+      puts "\tEPSG:900913 Extent:  (#{bounds.join(', ')})"
+      wgsbounds = mercator.tile_lat_lon_bounds( tx, ty, tz)
+      puts "\tWGS84 Extent: (#{wgsbounds.join(', ')})"
+      puts "\tgdalwarp -ts 256 256 -te %s %s %s %s %s %s_%s_%s.tif" % [
+        bounds[0], bounds[1], bounds[2], bounds[3], "<your-raster-file-in-epsg900913.ext>", tz, tx, ty
+      ]
+      puts
+    end
+  end
+
+end # if
